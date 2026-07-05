@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur de Lots XAUUSD - Paysage</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .calculator-container { background-color: #1e293b; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); width: 100%; max-width: 850px; border: 1px solid #334155; display: table; border-collapse: separate; overflow: hidden; }
+        .panel { display: table-cell; width: 50%; padding: 30px; vertical-align: top; }
+        .left-panel { border-right: 1px solid #334155; }
+        .right-panel { background-color: #111827; position: relative; }
+        h2 { margin-top: 0; color: #fbbf24; font-size: 22px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; color: #94a3b8; font-size: 13px; }
+        input, select { width: 100%; padding: 10px; background-color: #0f172a; border: 1px solid #475569; border-radius: 6px; color: #fff; font-size: 15px; }
+        input:focus, select:focus { outline: none; border-color: #fbbf24; }
+        .btn-calc { width: 100%; padding: 12px; background-color: #d97706; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-calc:hover { background-color: #b45309; }
+        .placeholder-text { color: #475569; text-align: center; margin-top: 100px; font-size: 15px; font-style: italic; }
+        .result-content { display: none; }
+        .result-title { font-size: 14px; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .result-value { font-size: 28px; font-weight: bold; color: #fbbf24; background-color: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 6px; border-left: 4px solid #fbbf24; margin-bottom: 20px; text-align: center; }
+        .result-details { font-size: 14px; color: #cbd5e1; line-height: 1.8; background-color: #1f2937; padding: 15px; border-radius: 6px; border: 1px solid #374151; }
+    </style>
+</head>
+<body>
+
+<div class="calculator-container">
+    <div class="panel left-panel">
+        <h2>Configuration XAUUSD</h2>
+        <div class="input-group">
+            <label for="balance">Solde du compte ($)</label>
+            <input type="number" id="balance" value="10000">
+        </div>
+        <div class="input-group">
+            <label for="riskType">Type de risque</label>
+            <select id="riskType" onchange="toggleRiskInput()">
+                <option value="percent">Pourcentage (%)</option>
+                <option value="cash">Montant fixe ($)</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label id="riskLabel" for="riskValue">Risque maximum (%)</label>
+            <input type="number" id="riskValue" value="0.5" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="slDistance">Distance du SL (en $ sur l'Or)</label>
+            <input type="number" id="slDistance" value="25">
+        </div>
+        <div class="input-group">
+            <label for="positions">Nombre de positions à ouvrir</label>
+            <input type="number" id="positions" value="1" min="1">
+        </div>
+        <button class="btn-calc" onclick="calculerLots()">Calculer les lots</button>
+    </div>
+    
+    <div class="panel right-panel">
+        <div id="placeholder" class="placeholder-text">
+            Entrez vos paramètres et cliquez sur "Calculer" pour afficher les résultats.
+        </div>
+        <div id="resultContent" class="result-content">
+            <div class="result-title">Taille requise par position</div>
+            <div class="result-value" id="lotResult">0.00 lot</div>
+            <div class="result-title">Détails du risque</div>
+            <div class="result-details" id="detailsResult"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleRiskInput() {
+        const riskType = document.getElementById('riskType').value;
+        const riskLabel = document.getElementById('riskLabel');
+        const riskInput = document.getElementById('riskValue');
+        
+        if (riskType === 'percent') {
+            riskLabel.innerText = "Risque maximum (%)";
+            riskInput.value = "0.5";
+            riskInput.step = "0.1";
+        } else {
+            riskLabel.innerText = "Risque maximum ($)";
+            riskInput.value = "100";
+            riskInput.step = "5";
+        }
+    }
+
+    function calculerLots() {
+        const balance = parseFloat(document.getElementById('balance').value);
+        const riskType = document.getElementById('riskType').value;
+        const riskValue = parseFloat(document.getElementById('riskValue').value);
+        const slDistance = parseFloat(document.getElementById('slDistance').value);
+        const numPositions = parseInt(document.getElementById('positions').value);
+        
+        if (isNaN(balance) || isNaN(riskValue) || isNaN(slDistance) || isNaN(numPositions) || slDistance <= 0 || numPositions <= 0) {
+            alert("Veuillez entrer des valeurs valides.");
+            return;
+        }
+        
+        let totalRiskCash = 0;
+        let displayRisk = "";
+        
+        if (riskType === 'percent') {
+            totalRiskCash = balance * (riskValue / 100);
+            displayRisk = riskValue + "%";
+        } else {
+            totalRiskCash = riskValue;
+            displayRisk = ((riskValue / balance) * 100).toFixed(2) + "%";
+        }
+        
+        const riskPerPosition = totalRiskCash / numPositions;
+        let lotPerPosition = riskPerPosition / (slDistance * 100);
+        lotPerPosition = Math.round(lotPerPosition * 100) / 100;
+        
+        document.getElementById('lotResult').innerText = lotPerPosition.toFixed(2) + " lot" + (lotPerPosition > 1 ? "s" : "");
+        document.getElementById('detailsResult').innerHTML = 
+            `• Actif : <strong>XAUUSD (Gold)</strong><br>` +
+            `• Risque total : <strong>${totalRiskCash.toFixed(2)} $</strong> (${displayRisk})<br>` +
+            `• Risque par position : <strong>${riskPerPosition.toFixed(2)} $</strong><br>` +
+            `• Volume total combiné : <strong>${(lotPerPosition * numPositions).toFixed(2)} lots</strong>`;
+            
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('resultContent').style.display = 'block';
+    }
+</script>
+</body>
+</html>
