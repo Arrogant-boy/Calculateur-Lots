@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculateur de Lots XAUUSD</title>
+    <title>Calculateur de Lots</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
@@ -21,7 +21,7 @@
         .placeholder-text { color: #475569; text-align: center; margin-top: 100px; font-size: 15px; font-style: italic; }
         .result-content { display: none; }
         .result-title { font-size: 14px; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .result-value { font-size: 28px; font-weight: bold; color: #fbbf24; background-color: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 6px; border-left: 4px solid #fbbf24; margin-bottom: 20px; text-align: center; }
+        .result-value { font-size: 22px; font-weight: bold; color: #fbbf24; background-color: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 6px; border-left: 4px solid #fbbf24; margin-bottom: 20px; text-align: left; line-height: 1.6; }
         .result-details { font-size: 14px; color: #cbd5e1; line-height: 1.8; background-color: #1f2937; padding: 15px; border-radius: 6px; border: 1px solid #374151; }
     </style>
 </head>
@@ -29,7 +29,7 @@
 
 <div class="calculator-container">
     <div class="panel left-panel">
-        <h2>Calculateur de lot XAUUSD</h2>
+        <h2>Calculateur de lots</h2>
         <div class="input-group">
             <label for="balance">Solde du compte ($)</label>
             <input type="number" id="balance" value="10000">
@@ -51,7 +51,7 @@
         </div>
         <div class="input-group">
             <label for="positions">Nombre de positions à ouvrir</label>
-            <input type="number" id="positions" value="1" min="1">
+            <input type="number" id="positions" value="2" min="1">
         </div>
         <button class="btn-calc" onclick="calculerLots()">Calculer les lots</button>
     </div>
@@ -61,8 +61,8 @@
             Entrez vos paramètres et cliquez sur "Calculer" pour afficher les résultats.
         </div>
         <div id="resultContent" class="result-content">
-            <div class="result-title">Taille requise par position</div>
-            <div class="result-value" id="lotResult">0.00 lot</div>
+            <div class="result-title">Lots à ouvrir par position</div>
+            <div class="result-value" id="lotResult"></div>
             <div class="result-title">Détails du risque</div>
             <div class="result-details" id="detailsResult"></div>
         </div>
@@ -109,20 +109,42 @@
             displayRisk = ((riskValue / balance) * 100).toFixed(2) + "%";
         }
         
-        const riskPerPosition = totalRiskCash / numPositions;
-        let lotPerPosition = riskPerPosition / (slDistance * 100);
-        lotPerPosition = Math.round(lotPerPosition * 100) / 100;
+        // 1. Calcul du volume TOTAL de lots requis pour le trade complet
+        // Arrondi au centième le plus proche (2 décimales) pour connaître la cible exacte
+        let totalLots = totalRiskCash / (slDistance * 100);
+        totalLots = Math.round(totalLots * 100) / 100;
         
-        document.getElementById('lotResult').innerText = lotPerPosition.toFixed(2) + " lot" + (lotPerPosition > 1 ? "s" : "");
+        // 2. Distribution intelligente des lots entre les positions
+        // On convertit en "centitèmes" entiers pour éviter les bugs de calcul JS (ex: 0.07 -> 7)
+        let totalCentièmes = Math.round(totalLots * 100);
+        let baseCentièmes = Math.floor(totalCentièmes / numPositions);
+        let resteCentièmes = totalCentièmes % numPositions;
+        
+        let resultHTML = "";
+        let validationTotalLots = 0;
+        
+        // On génère la taille de chaque position
+        for (let i = 1; i <= numPositions; i++) {
+            // Si on a un reste, on distribue 0.01 en priorité aux premières positions
+            let positionCentièmes = baseCentièmes + (i <= resteCentièmes ? 1 : 0);
+            let positionLots = positionCentièmes / 100;
+            validationTotalLots += positionLots;
+            
+            resultHTML += `• Position ${i} : <strong>${positionLots.toFixed(2)} lot${positionLots > 1 ? 's' : ''}</strong><br>`;
+        }
+        
+        // Mise à jour de l'affichage à droite
+        document.getElementById('lotResult').innerHTML = resultHTML;
+        
         document.getElementById('detailsResult').innerHTML = 
             `• Actif : <strong>XAUUSD (Gold)</strong><br>` +
             `• Risque total : <strong>${totalRiskCash.toFixed(2)} $</strong> (${displayRisk})<br>` +
-            `• Risque par position : <strong>${riskPerPosition.toFixed(2)} $</strong><br>` +
-            `• Volume total combiné : <strong>${(lotPerPosition * numPositions).toFixed(2)} lots</strong>`;
+            `• Volume total combiné : <strong>${validationTotalLots.toFixed(2)} lots</strong>`;
             
         document.getElementById('placeholder').style.display = 'none';
         document.getElementById('resultContent').style.display = 'block';
     }
 </script>
+
 </body>
 </html>
