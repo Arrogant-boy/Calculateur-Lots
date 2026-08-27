@@ -46,8 +46,8 @@
             <input type="number" id="riskValue" value="0.5" step="0.1">
         </div>
         <div class="input-group">
-            <label for="slDistance">Distance du SL (en $ sur l'Or)</label>
-            <input type="number" id="slDistance" value="25">
+            <label for="slDistance">Distance du SL (en pips sur l'Or)</label>
+            <input type="number" id="slDistance" value="250" step="1">
         </div>
         <div class="input-group">
             <label for="positions">Nombre de positions à ouvrir</label>
@@ -70,6 +70,9 @@
 </div>
 
 <script>
+    // 10 pips sur XAUUSD = 1$ de mouvement de prix, donc 1 pip = 0.1$
+    const PIPS_PAR_DOLLAR = 10;
+
     function toggleRiskInput() {
         const riskType = document.getElementById('riskType').value;
         const riskLabel = document.getElementById('riskLabel');
@@ -90,13 +93,16 @@
         const balance = parseFloat(document.getElementById('balance').value);
         const riskType = document.getElementById('riskType').value;
         const riskValue = parseFloat(document.getElementById('riskValue').value);
-        const slDistance = parseFloat(document.getElementById('slDistance').value);
+        const slDistancePips = parseFloat(document.getElementById('slDistance').value);
         const numPositions = parseInt(document.getElementById('positions').value);
         
-        if (isNaN(balance) || isNaN(riskValue) || isNaN(slDistance) || isNaN(numPositions) || slDistance <= 0 || numPositions <= 0) {
+        if (isNaN(balance) || isNaN(riskValue) || isNaN(slDistancePips) || isNaN(numPositions) || slDistancePips <= 0 || numPositions <= 0) {
             alert("Veuillez entrer des valeurs valides.");
             return;
         }
+        
+        // Conversion pips -> $ (10 pips = 1$)
+        const slDistance = slDistancePips / PIPS_PAR_DOLLAR;
         
         let totalRiskCash = 0;
         let displayRisk = "";
@@ -138,6 +144,7 @@
         
         document.getElementById('detailsResult').innerHTML = 
             `• Actif : <strong>XAUUSD (Gold)</strong><br>` +
+            `• Distance du SL : <strong>${slDistancePips} pips</strong> (${slDistance.toFixed(2)} $)<br>` +
             `• Risque total : <strong>${totalRiskCash.toFixed(2)} $</strong> (${displayRisk})<br>` +
             `• Volume total combiné : <strong>${validationTotalLots.toFixed(2)} lots</strong>`;
             
